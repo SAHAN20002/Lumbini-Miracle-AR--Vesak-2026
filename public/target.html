@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AR Target Image</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f8f5ef;
+      color: #1d1730;
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      max-width: 760px;
+      background: white;
+      padding: 28px;
+      border-radius: 28px;
+      box-shadow: 0 22px 80px rgba(0,0,0,.14);
+      text-align: center;
+    }
+    img {
+      max-width: 100%;
+      width: 420px;
+      border-radius: 18px;
+      border: 1px solid #ddd;
+    }
+    button {
+      margin-top: 18px;
+      padding: 14px 22px;
+      border: 0;
+      border-radius: 16px;
+      background: #facc15;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    p {
+      line-height: 1.7;
+      color: #504861;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>MindAR Test Target</h1>
+    <p>
+      Print this image or open it on another phone/laptop. Then open the AR camera and point your mobile camera at this target.
+      Later you can replace this with your own Vesak poster target.
+    </p>
+    <!-- <img src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/examples/image-tracking/assets/card-example/card.png" alt="MindAR test target image" /> -->
+     <img src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@master/examples/image-tracking/assets/card-example/card.png" alt="MindAR test target image" />
+    <br />
+    <button onclick="window.print()">Print Target</button>
+  </main>
+</body>
+</html>

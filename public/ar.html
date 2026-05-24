@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>Lumbini Miracle AR Camera</title>
+
+  <!-- A-Frame must load before MindAR's A-Frame integration. -->
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    :root {
+      --gold: #facc15;
+      --cream: #fff7df;
+      --pink: #f9a8d4;
+      --deep: #140b2d;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: Inter, Arial, sans-serif;
+      background: #000;
+      color: white;
+    }
+
+    .top-bar {
+      position: fixed;
+      top: env(safe-area-inset-top, 12px);
+      left: 12px;
+      right: 12px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .pill {
+      pointer-events: auto;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(20, 11, 45, .64);
+      backdrop-filter: blur(18px);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--cream);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 14px 40px rgba(0,0,0,.25);
+    }
+
+    .bottom-controls {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+      z-index: 20;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .control-btn {
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(20, 11, 45, .70);
+      backdrop-filter: blur(18px);
+      color: white;
+      border-radius: 18px;
+      padding: 13px 10px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .control-btn.primary {
+      background: var(--gold);
+      color: #111827;
+      border-color: rgba(250, 204, 21, .5);
+    }
+
+    .hint {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      top: 74px;
+      z-index: 18;
+      border-radius: 22px;
+      padding: 14px 16px;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,.15);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(255,255,255,.86);
+    }
+
+    .story-panel {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+      z-index: 30;
+      display: none;
+      border-radius: 26px;
+      padding: 20px;
+      background: rgba(20, 11, 45, .88);
+      backdrop-filter: blur(22px);
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: 0 22px 80px rgba(0,0,0,.45);
+    }
+
+    .story-panel.open {
+      display: block;
+    }
+
+    .story-panel h2 {
+      margin: 0 0 10px;
+      color: var(--gold);
+      font-size: 20px;
+    }
+
+    .story-panel p {
+      margin: 0;
+      color: rgba(255,255,255,.78);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .close-story {
+      margin-top: 14px;
+      width: 100%;
+      border: 0;
+      background: var(--gold);
+      color: #111827;
+      border-radius: 16px;
+      padding: 12px;
+      font-weight: 900;
+    }
+
+    .loading-cover {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background:
+        radial-gradient(circle at top, rgba(250,204,21,.18), transparent 36rem),
+        linear-gradient(145deg, #140b2d, #05131f);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      transition: opacity .4s ease;
+    }
+
+    .loading-cover.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader-lotus {
+      font-size: 74px;
+      animation: pulse 1.6s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: .72; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+  </style>
+
+  <script>
+    AFRAME.registerComponent('auto-orbit', {
+      schema: {
+        speed: { type: 'number', default: 0.28 }
+      },
+      tick: function (time, delta) {
+        this.el.object3D.rotation.y += this.data.speed * delta / 1000;
+      }
+    });
+
+    AFRAME.registerComponent('lotus-step-animation', {
+      init: function () {
+        this.lotuses = Array.from(this.el.querySelectorAll('.lotus-step'));
+        this.finalText = this.el.querySelector('#final-text');
+        this.glow = this.el.querySelector('#divine-glow');
+        this.started = false;
+
+        window.playLumbiniAnimation = () => {
+          this.play();
+        };
+
+        this.el.addEventListener('targetFound', () => {
+          document.getElementById('hint').innerHTML = 'Target found. Watch the seven lotus steps bloom.';
+          this.play();
+        });
+
+        this.el.addEventListener('targetLost', () => {
+          document.getElementById('hint').innerHTML = 'Point your camera at the printed/open target image.';
+        });
+      },
+
+      play: function () {
+        if (this.started) {
+          this.reset();
+        }
+        this.started = true;
+
+        this.lotuses.forEach((lotus, index) => {
+          setTimeout(() => {
+            lotus.setAttribute('visible', 'true');
+            lotus.emit('bloom');
+            this.playBell(index);
+          }, 900 + index * 700);
+        });
+
+        setTimeout(() => {
+          this.finalText.setAttribute('visible', 'true');
+          this.finalText.emit('showText');
+          this.glow.emit('strongGlow');
+        }, 6600);
+      },
+
+      reset: function () {
+        this.lotuses.forEach((lotus) => {
+          lotus.setAttribute('visible', 'false');
+          lotus.setAttribute('scale', '0.001 0.001 0.001');
+        });
+        this.finalText.setAttribute('visible', 'false');
+        this.finalText.setAttribute('scale', '0.001 0.001 0.001');
+      },
+
+      playBell: function(index) {
+        if (!window.audioEnabled || !window.audioContext) return;
+        const ctx = window.audioContext;
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 520 + index * 55;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32);
+
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.start();
+        oscillator.stop(ctx.currentTime + 0.34);
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <div id="loadingCover" class="loading-cover">
+    <div>
+      <div class="loader-lotus">🪷</div>
+      <h1>Lumbini Miracle AR</h1>
+      <p>Allow camera access, then point your phone at the target image.</p>
+    </div>
+  </div>
+
+  <div class="top-bar">
+    <a href="/" class="pill">← Home</a>
+    <span class="pill">Vesak 2026 AR</span>
+  </div>
+
+  <div id="hint" class="hint">
+    Point your camera at the printed/open target image.
+  </div>
+
+  <div id="storyPanel" class="story-panel">
+    <h2>The Birth of Prince Siddhartha</h2>
+    <p>
+      In the sacred garden of Lumbini, Queen Mahamaya gave birth to Prince Siddhartha.
+      Buddhist tradition describes this moment as miraculous and divine. The newborn child took seven steps,
+      and with each step a lotus flower bloomed beneath his feet, symbolizing the path to enlightenment.
+    </p>
+    <button class="close-story" onclick="toggleStory(false)">Close</button>
+  </div>
+
+  <div class="bottom-controls">
+    <button class="control-btn primary" onclick="window.playLumbiniAnimation && window.playLumbiniAnimation()">Replay</button>
+    <button id="soundBtn" class="control-btn" onclick="toggleSound()">Sound Off</button>
+    <button class="control-btn" onclick="toggleStory(true)">Story</button>
+  </div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@master/examples/image-tracking/assets/card-example/card.mind; filterMinCF: 0.0001; filterBeta: 0.001;"
+    color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights: false, antialias: true, alpha: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    embedded
+  >
+    <a-assets>
+      <a-mixin id="petal" geometry="primitive: sphere; radius: 0.025" material="color: #f9a8d4; opacity: 0.85; transparent: true"></a-mixin>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0" lotus-step-animation>
+      <!-- Main scene base -->
+      <a-entity position="0 0 0" scale="0.86 0.86 0.86">
+        <a-cylinder
+          position="0 0 0"
+          radius="0.72"
+          height="0.04"
+          color="#14532d"
+          material="roughness: 0.8; metalness: 0.05"
+        ></a-cylinder>
+
+        <a-torus
+          position="0 0.035 0"
+          radius="0.74"
+          radius-tubular="0.012"
+          color="#facc15"
+          material="emissive: #9a6b00; emissiveIntensity: 0.3"
+        ></a-torus>
+
+        <!-- Sal tree / sacred tree -->
+        <a-entity position="-0.36 0.08 -0.05">
+          <a-cylinder position="0 0.26 0" radius="0.045" height="0.52" color="#7c2d12"></a-cylinder>
+          <a-cone position="0 0.62 0" radius-bottom="0.24" radius-top="0.04" height="0.42" color="#166534"></a-cone>
+          <a-sphere position="-0.1 0.58 0.02" radius="0.16" color="#15803d"></a-sphere>
+          <a-sphere position="0.08 0.65 -0.01" radius="0.18" color="#22c55e"></a-sphere>
+          <a-sphere position="0.14 0.53 0.04" radius="0.13" color="#16a34a"></a-sphere>
+        </a-entity>
+
+        <!-- Queen Mahamaya respectful symbolic figure -->
+        <a-entity position="-0.16 0.09 0.12" rotation="0 20 0">
+          <a-cylinder position="0 0.18 0" radius="0.075" height="0.30" color="#f9a8d4"></a-cylinder>
+          <a-sphere position="0 0.38 0" radius="0.075" color="#f8d3b0"></a-sphere>
+          <a-torus position="0 0.42 0" radius="0.082" radius-tubular="0.008" color="#facc15"></a-torus>
+          <a-cylinder position="0.08 0.30 -0.005" radius="0.012" height="0.26" color="#f8d3b0" rotation="0 0 -35"></a-cylinder>
+        </a-entity>
+
+        <!-- Baby Siddhartha symbolic figure -->
+        <a-entity id="siddhartha" position="0.07 0.10 0.03" auto-orbit="speed: 0.18">
+          <a-sphere position="0 0.26 0" radius="0.055" color="#f8d3b0"></a-sphere>
+          <a-cylinder position="0 0.14 0" radius="0.035" height="0.16" color="#fff7df"></a-cylinder>
+          <a-torus position="0 0.33 0" radius="0.09" radius-tubular="0.008" color="#facc15" material="emissive: #facc15; emissiveIntensity: 0.8"></a-torus>
+          <a-cylinder position="0.055 0.20 0" radius="0.008" height="0.11" color="#f8d3b0" rotation="0 0 -28"></a-cylinder>
+          <a-cylinder position="-0.055 0.20 0" radius="0.008" height="0.11" color="#f8d3b0" rotation="0 0 28"></a-cylinder>
+        </a-entity>
+
+        <!-- Seven lotus steps -->
+        <a-entity id="lotus-group">
+          <a-entity class="lotus-step" position="-0.18 0.075 0.36" scale="0.001 0.001 0.001" visible="false" animation__bloom="property: scale; from: 0.001 0.001 0.001; to: 0.16 0.16 0.16; dur: 450; easing: easeOutBack; startEvents: bloom">
+            <a-sphere radius="0.14" scale="1 0.15 1" color="#f9a8d4" material="emissive: #8a1748; emissiveIntensity: 0.2"></a-sphere>
+            <a-sphere position="0 0.02 0" radius="0.06" color="#facc15"></a-sphere>
+          </a-entity>
+
+          <a-entity class="lotus-step" position="-0.08 0.075 0.29" scale="0.001 0.001 0.001" visible="false" animation__bloom="property: scale; from: 0.001 0.001 0.001; to: 0.16 0.16 0.16; dur: 450; easing: easeOutBack; startEvents: bloom">
+            <a-sphere radius="0.14" scale="1 0.15 1" color="#f9a8d4"></a-sphere>
+            <a-sphere position="0 0.02 0" radius="0.06" color="#facc15"></a-sphere>
+          </a-entity>
+
+          <a-entity class="lotus-step" position="0.02 0.075 0.22" scale="0.001 0.001 0.001" visible="false" animation__bloom="property: scale; from: 0.001 0.001 0.001; to: 0.16 0.16 0.16; dur: 450; easing: easeOutBack; startEvents: bloom">
+            <a-sphere radius="0.14" scale="1 0.15 1" color="#f9a8d4"></a-sphere>
+            <a-sphere position="0 0.02 0" radius="0.06" color="#facc15"></a-sphere>
+          </a-entity>
+
+          <a-entity class="lotus-step" position="0.12 0.075 0.15" scale="0.001 0.001 0.001" visible="false" animation__bloom="property: scale; from: 0.001 0.001 0.001; to: 0.16 0.16 0.16; dur: 450; easing: easeOutBack; startEvents: bloom">
+            <a-sphere radius="0.14" scale="1 0.15 1" color="#f9a8d4"></a-sphere>
+            <a-sphere position="0 0.02 0" radius="0.06" color="#facc15"></a-sphere>
+          </a-entity>
+
+          <a-entity class="lotus-step" position="0.22 0.075 0.08" scale="0.001 0.001 0.001" visible="false" animation__bloom="property: scale; from: 0.001 0.001 0.001; to: 0.16 0.16 0.16; dur: 450; easing: easeOutBack; startEvents: bloom">
+            <a-sphere radius="0.14" scale="1 0.15 1" color="#f9a8d4"></a-sphere>
+            <a-sphere position="0 0.02 0" radius="0.06" color="#facc15"></a-sphere>
+          </a-entity>
+
+          <a-entity class="lotus-step" position="0.32 0.075 0.01" scale="0.001 0.001 0.001" visible="false" animation__bloom="property: scale; from: 0.001 0.001 0.001; to: 0.16 0.16 0.16; dur: 450; easing: easeOutBack; startEvents: bloom">
+            <a-sphere radius="0.14" scale="1 0.15 1" color="#f9a8d4"></a-sphere>
+            <a-sphere position="0 0.02 0" radius="0.06" color="#facc15"></a-sphere>
+          </a-entity>
+
+          <a-entity class="lotus-step" position="0.42 0.075 -0.06" scale="0.001 0.001 0.001" visible="false" animation__bloom="property: scale; from: 0.001 0.001 0.001; to: 0.16 0.16 0.16; dur: 450; easing: easeOutBack; startEvents: bloom">
+            <a-sphere radius="0.14" scale="1 0.15 1" color="#f9a8d4"></a-sphere>
+            <a-sphere position="0 0.02 0" radius="0.06" color="#facc15"></a-sphere>
+          </a-entity>
+        </a-entity>
+
+        <!-- Divine glow and light rings -->
+        <a-sphere
+          id="divine-glow"
+          position="0.08 0.42 0.03"
+          radius="0.22"
+          color="#facc15"
+          material="transparent: true; opacity: 0.22; emissive: #facc15; emissiveIntensity: 1"
+          animation__pulse="property: scale; dir: alternate; dur: 1200; loop: true; to: 1.16 1.16 1.16; easing: easeInOutSine"
+          animation__strong="property: scale; from: 1 1 1; to: 1.65 1.65 1.65; dur: 900; easing: easeOutCubic; startEvents: strongGlow"
+        ></a-sphere>
+
+        <a-torus
+          position="0.08 0.36 0.03"
+          radius="0.26"
+          radius-tubular="0.006"
+          color="#facc15"
+          material="emissive: #facc15; emissiveIntensity: 0.7; transparent: true; opacity: 0.75"
+          rotation="90 0 0"
+          auto-orbit="speed: 0.55"
+        ></a-torus>
+
+        <!-- Floating petals / stars -->
+        <a-entity position="0 0.18 0" auto-orbit="speed: 0.12">
+          <a-sphere position="-0.38 0.36 0.18" radius="0.025" color="#f9a8d4" animation="property: position; dir: alternate; dur: 1500; loop: true; to: -0.38 0.43 0.18"></a-sphere>
+          <a-sphere position="0.35 0.28 0.24" radius="0.018" color="#facc15" animation="property: position; dir: alternate; dur: 1700; loop: true; to: 0.35 0.35 0.24"></a-sphere>
+          <a-sphere position="0.12 0.48 -0.24" radius="0.02" color="#fff7df" animation="property: position; dir: alternate; dur: 1300; loop: true; to: 0.12 0.54 -0.24"></a-sphere>
+          <a-sphere position="-0.04 0.55 0.32" radius="0.017" color="#fde68a" animation="property: position; dir: alternate; dur: 1600; loop: true; to: -0.04 0.62 0.32"></a-sphere>
+        </a-entity>
+
+        <!-- Final sacred text -->
+        <a-text
+          id="final-text"
+          value="Seven Lotus Steps"
+          position="0 0.72 0.04"
+          align="center"
+          color="#fff7df"
+          width="1.9"
+          visible="false"
+          scale="0.001 0.001 0.001"
+          animation__show="property: scale; from: 0.001 0.001 0.001; to: 1 1 1; dur: 700; easing: easeOutBack; startEvents: showText"
+        ></a-text>
+
+        <a-text
+          value="Lumbini Miracle"
+          position="0 -0.02 0.62"
+          rotation="-70 0 0"
+          align="center"
+          color="#facc15"
+          width="1.4"
+        ></a-text>
+      </a-entity>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    window.audioEnabled = false;
+    window.audioContext = null;
+    let droneOsc = null;
+    let droneGain = null;
+
+    function toggleStory(open) {
+      document.getElementById('storyPanel').classList.toggle('open', open);
+    }
+
+    function toggleSound() {
+      const btn = document.getElementById('soundBtn');
+
+      if (!window.audioContext) {
+        window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (!window.audioEnabled) {
+        startAmbient();
+        window.audioEnabled = true;
+        btn.textContent = 'Sound On';
+      } else {
+        stopAmbient();
+        window.audioEnabled = false;
+        btn.textContent = 'Sound Off';
+      }
+    }
+
+    function startAmbient() {
+      const ctx = window.audioContext;
+      droneOsc = ctx.createOscillator();
+      droneGain = ctx.createGain();
+
+      droneOsc.type = 'sine';
+      droneOsc.frequency.value = 136.1;
+      droneGain.gain.value = 0.025;
+
+      droneOsc.connect(droneGain);
+      droneGain.connect(ctx.destination);
+      droneOsc.start();
+    }
+
+    function stopAmbient() {
+      if (droneOsc) {
+        droneOsc.stop();
+        droneOsc.disconnect();
+        droneGain.disconnect();
+        droneOsc = null;
+        droneGain = null;
+      }
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('loadingCover').classList.add('hide');
+      }, 1400);
+    });
+  </script>
+</body>
+</html>

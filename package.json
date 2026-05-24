@@ -1,0 +1,22 @@
+{
+  "name": "vesak-lumbini-ar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QR based WebAR Vesak 2026 Lumbini Miracle experience using React, Vite, Tailwind, A-Frame and MindAR.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "lucide-react": "latest"
+  },
+  "devDependencies": {
+    "tailwindcss": "latest",
+    "@tailwindcss/vite": "latest"
+  }
+}
